@@ -18,6 +18,7 @@ platform.on('data', function (data) {
 			console.error('Error sending data', error);
 			platform.handleException(error);
 			callback();
+			d.exit();
 		});
 
 		d.run(function () {
@@ -48,6 +49,7 @@ platform.on('close', function () {
 		console.error('Error closing Websockets Channel on port ' + port, error);
 		platform.handleException(error);
 		platform.notifyClose();
+		d.exit();
 	});
 
 	d.run(function () {
@@ -90,6 +92,7 @@ platform.once('ready', function (options) {
 			d.once('error', function (error) {
 				console.error('Error on message data', error);
 				platform.handleException(error);
+				d.exit();
 			});
 
 			d.run(function () {
