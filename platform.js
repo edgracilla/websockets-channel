@@ -1,8 +1,5 @@
 'use strict';
 
-var inherits     = require('util').inherits,
-	EventEmitter = require('events').EventEmitter;
-
 /**
  * Utility function to validate String Objects
  * @param val The value to be evaluated.
@@ -29,45 +26,52 @@ var isError = function (val) {
 function Platform() {
 	if (!(this instanceof Platform)) return new Platform();
 
-	EventEmitter.call(this);
+	require('events').EventEmitter.call(this);
 	Platform.init.call(this);
 }
 
-inherits(Platform, EventEmitter);
+require('util').inherits(Platform, require('events').EventEmitter);
 
 /**
  * Init function for Platform.
  */
 Platform.init = function () {
-	var self = this;
+	process.on('SIGINT', () => {
+		this.emit('close');
 
-	process.on('SIGTERM', function () {
-		self.emit('close');
-
-		setTimeout(function () {
-			self.removeAllListeners();
+		setTimeout(() => {
+			this.removeAllListeners();
 			process.exit();
 		}, 2000);
 	});
 
-	process.on('uncaughtException', function (error) {
-		console.error('Uncaught Exception', error);
-		self.handleException(error);
-		self.emit('close');
+	process.on('SIGTERM', () => {
+		this.emit('close');
 
-		setTimeout(function () {
-			self.removeAllListeners();
+		setTimeout(() => {
+			this.removeAllListeners();
+			process.exit();
+		}, 2000);
+	});
+
+	process.on('uncaughtException', (error) => {
+		console.error('Uncaught Exception', error);
+		this.handleException(error);
+		this.emit('close');
+
+		setTimeout(() => {
+			this.removeAllListeners();
 			process.exit(1);
 		}, 2000);
 	});
 
-	process.on('message', function (m) {
+	process.on('message', (m) => {
 		if (m.type === 'ready')
-			self.emit('ready', m.data.options);
+			this.emit('ready', m.data.options);
 		else if (m.type === 'data')
-			self.emit('data', m.data);
+			this.emit('data', m.data);
 		else if (m.type === 'close')
-			self.emit('close');
+			this.emit('close');
 	});
 };
 
@@ -79,7 +83,7 @@ Platform.prototype.notifyReady = function (callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
+	setImmediate(() => {
 		process.send({
 			type: 'ready'
 		}, callback);
@@ -94,7 +98,7 @@ Platform.prototype.notifyClose = function (callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
+	setImmediate(() => {
 		process.send({
 			type: 'close'
 		}, callback);
@@ -111,7 +115,7 @@ Platform.prototype.sendMessageToDevice = function (device, message, callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
+	setImmediate(() => {
 		if (!device || !isString(device)) return callback(new Error('A valid device id is required.'));
 		if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
 
@@ -135,7 +139,7 @@ Platform.prototype.sendMessageToGroup = function (group, message, callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
+	setImmediate(() => {
 		if (!group || !isString(group)) return callback(new Error('A valid group name is required.'));
 		if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
 
@@ -158,14 +162,12 @@ Platform.prototype.log = function (data, callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
-		if (!data || !isString(data)) return callback(new Error('A valid log data is required.'));
+	if (!data || !isString(data)) return callback(new Error('A valid log data is required.'));
 
-		process.send({
-			type: 'log',
-			data: data
-		}, callback);
-	});
+	process.send({
+		type: 'log',
+		data: data
+	}, callback);
 };
 
 /**
@@ -177,7 +179,7 @@ Platform.prototype.handleException = function (error, callback) {
 	callback = callback || function () {
 		};
 
-	setImmediate(function () {
+	setImmediate(() => {
 		if (!isError(error)) return callback(new Error('A valid error object is required.'));
 
 		process.send({
