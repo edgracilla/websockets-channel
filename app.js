@@ -3,14 +3,12 @@
 
 var domain   = require('domain'),
 	platform = require('./platform'),
+	isArray = require('lodash.isarray'),
+	isPlainObject = require('lodash.isplainobject'),
+	async = require('async'),
 	server, port;
 
-/*
- * Listen for the data event.
- */
-platform.on('data', function (data) {
-	var async = require('async');
-
+let sendData = (data) => {
 	async.each(server.clients, function (client, callback) {
 		var d = domain.create();
 
@@ -37,11 +35,21 @@ platform.on('data', function (data) {
 			});
 		});
 	});
+};
+
+platform.on('data', function (data) {
+	if(isPlainObject(data)){
+		sendData(data);
+	}
+	else if(isArray(data)){
+		async.each(data, function(datum){
+			sendData(datum);
+		});
+	}
+	else
+		platform.handleException(new Error(`Invalid data received. Data must be a valid Array/JSON Object or a collection of objects. Data: ${data}`));
 });
 
-/*
- * Event to listen to in order to gracefully release all resources bound to this service.
- */
 platform.on('close', function () {
 	var d = domain.create();
 
@@ -60,9 +68,6 @@ platform.on('close', function () {
 	});
 });
 
-/*
- * Listen for the ready event.
- */
 platform.once('ready', function (options) {
 	var config = require('./config.json');
 	var WebSocketServer = require('ws').Server;
