@@ -1,49 +1,41 @@
 'use strict';
 
-
-var domain   = require('domain'),
-	platform = require('./platform'),
-	isArray = require('lodash.isarray'),
+var platform      = require('./platform'),
+	isArray       = require('lodash.isarray'),
 	isPlainObject = require('lodash.isplainobject'),
-	async = require('async'),
+	async         = require('async'),
 	server, port;
 
-let sendData = (data) => {
-	async.each(server.clients, function (client, callback) {
-		var d = domain.create();
+let sendData = function (data, callback) {
+	async.each(server.clients, function (client, done) {
+		client.send(JSON.stringify(data), function (error) {
+			if (!error) {
+				platform.log(JSON.stringify({
+					title: 'Data sent through Websocket Channel on port ' + port,
+					data: data
+				}));
+			}
 
-		d.once('error', function (error) {
-			console.error('Error sending data', error);
-			platform.handleException(error);
-			callback();
-			d.exit();
+			done(error);
 		});
-
-		d.run(function () {
-			client.send(JSON.stringify(data), function (error) {
-				if (error)
-					platform.handleException(error);
-				else {
-					platform.log(JSON.stringify({
-						title: 'Data sent through Websocket Channel on port ' + port,
-						data: data
-					}));
-				}
-
-				callback();
-				d.exit();
-			});
-		});
-	});
+	}, callback);
 };
 
 platform.on('data', function (data) {
-	if(isPlainObject(data)){
-		sendData(data);
+	if (isPlainObject(data)) {
+		sendData(data, (error) => {
+			if (error) return platform.handleException(error);
+		});
 	}
-	else if(isArray(data)){
-		async.each(data, function(datum){
-			sendData(datum);
+	else if (isArray(data)) {
+		async.each(data, function (datum, done) {
+			if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid Array/JSON Object or a collection of objects. Data: ${data}`));
+
+			sendData(datum, (error) => {
+				if (error) platform.handleException(error);
+			});
+		}, (error) => {
+			if (error) platform.handleException(error);
 		});
 	}
 	else
@@ -51,7 +43,7 @@ platform.on('data', function (data) {
 });
 
 platform.on('close', function () {
-	var d = domain.create();
+	let d = require('domain').create();
 
 	d.once('error', function (error) {
 		console.error('Error closing Websockets Channel on port ' + port, error);
@@ -69,11 +61,11 @@ platform.on('close', function () {
 });
 
 platform.once('ready', function (options) {
-	var config = require('./config.json');
-	var WebSocketServer = require('ws').Server;
+	let config = require('./config.json');
+	let WebSocketServer = require('ws').Server;
 
-	var messageEvent = options.message_event || config.message_event.default;
-	var groupMessageEvent = options.groupmessage_event || config.groupmessage_event.default;
+	let messageEvent = options.message_event || config.message_event.default;
+	let groupMessageEvent = options.groupmessage_event || config.groupmessage_event.default;
 
 	port = options.port;
 	server = new WebSocketServer({
@@ -92,23 +84,22 @@ platform.once('ready', function (options) {
 		});
 
 		socket.on('message', function (data) {
-			var d = domain.create();
+			async.waterfall([
+				async.constant(data || '{}'),
+				async.asyncify(JSON.parse)
+			], (error, obj) => {
+				if (error) return platform.handleException(error);
 
-			d.once('error', function (error) {
-				console.error('Error on message data', error);
-				platform.handleException(error);
-				d.exit();
-			});
-
-			d.run(function () {
-				data = JSON.parse(data);
-
-				if (data.type === messageEvent)
-					platform.sendMessageToDevice(data.target, data.message);
-				else if (data.type === groupMessageEvent)
-					platform.sendMessageToGroup(data.target, data.message);
-
-				d.exit();
+				if (obj.type === messageEvent) {
+					platform.sendMessageToDevice(obj.target, obj.message, (error) => {
+						if (error) platform.handleException(error);
+					});
+				}
+				else if (obj.type === groupMessageEvent) {
+					platform.sendMessageToGroup(obj.target, obj.message, (error) => {
+						if (error) platform.handleException(error);
+					});
+				}
 			});
 		});
 	});
