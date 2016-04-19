@@ -36,43 +36,43 @@ require('util').inherits(Platform, require('events').EventEmitter);
  * Init function for Platform.
  */
 Platform.init = function () {
-	process.on('SIGINT', () => {
-		this.emit('close');
+	['SIGHUP', 'SIGINT', 'SIGTERM'].forEach((signal) => {
+		process.on(signal, () => {
+		console.log(`Executing ${signal} listener...`);
+	this.emit('close');
 
-		setTimeout(() => {
-			this.removeAllListeners();
-			process.exit();
-		}, 2000);
-	});
+	setTimeout(() => {
+		this.removeAllListeners();
+	process.exit();
+}, 2000);
+});
+});
 
-	process.on('SIGTERM', () => {
-		this.emit('close');
+	['unhandledRejection', 'uncaughtException'].forEach((exceptionEvent) => {
+		process.on(exceptionEvent, (error) => {
+		console.error(exceptionEvent, error);
+	this.handleException(error);
+	this.emit('close');
 
-		setTimeout(() => {
-			this.removeAllListeners();
-			process.exit();
-		}, 2000);
-	});
-
-	process.on('uncaughtException', (error) => {
-		console.error('Uncaught Exception', error);
-		this.handleException(error);
-		this.emit('close');
-
-		setTimeout(() => {
-			this.removeAllListeners();
-			process.exit(1);
-		}, 2000);
-	});
+	setTimeout(() => {
+		this.removeAllListeners();
+	process.exit(1);
+}, 2000);
+});
+});
 
 	process.on('message', (m) => {
 		if (m.type === 'ready')
-			this.emit('ready', m.data.options);
-		else if (m.type === 'data')
-			this.emit('data', m.data);
-		else if (m.type === 'close')
-			this.emit('close');
-	});
+	this.emit('ready', m.data.options, m.data.devices);
+	else if (m.type === 'data')
+		this.emit('data', m.data);
+	else if (m.type === 'adddevice')
+		this.emit('adddevice', m.data);
+	else if (m.type === 'removedevice')
+		this.emit('removedevice', m.data);
+	else if (m.type === 'close')
+		this.emit('close');
+});
 };
 
 /**
@@ -85,9 +85,9 @@ Platform.prototype.notifyReady = function (callback) {
 
 	setImmediate(() => {
 		process.send({
-			type: 'ready'
-		}, callback);
-	});
+		type: 'ready'
+	}, callback);
+});
 };
 
 /**
@@ -100,9 +100,9 @@ Platform.prototype.notifyClose = function (callback) {
 
 	setImmediate(() => {
 		process.send({
-			type: 'close'
-		}, callback);
-	});
+		type: 'close'
+	}, callback);
+});
 };
 
 /**
@@ -117,16 +117,16 @@ Platform.prototype.sendMessageToDevice = function (device, message, callback) {
 
 	setImmediate(() => {
 		if (!device || !isString(device)) return callback(new Error('A valid device id is required.'));
-		if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
+	if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
 
-		process.send({
-			type: 'message',
-			data: {
-				device: device,
-				message: message
-			}
-		}, callback);
-	});
+	process.send({
+		type: 'message',
+		data: {
+			device: device,
+			message: message
+		}
+	}, callback);
+});
 };
 
 /**
@@ -141,16 +141,16 @@ Platform.prototype.sendMessageToGroup = function (group, message, callback) {
 
 	setImmediate(() => {
 		if (!group || !isString(group)) return callback(new Error('A valid group name is required.'));
-		if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
+	if (!message || !isString(message)) return callback(new Error('A valid message is required.'));
 
-		process.send({
-			type: 'message',
-			data: {
-				group: group,
-				message: message
-			}
-		}, callback);
-	});
+	process.send({
+		type: 'message',
+		data: {
+			group: group,
+			message: message
+		}
+	}, callback);
+});
 };
 
 /**
@@ -182,15 +182,15 @@ Platform.prototype.handleException = function (error, callback) {
 	setImmediate(() => {
 		if (!isError(error)) return callback(new Error('A valid error object is required.'));
 
-		process.send({
-			type: 'error',
-			data: {
-				name: error.name,
-				message: error.message,
-				stack: error.stack
-			}
-		}, callback);
-	});
+	process.send({
+		type: 'error',
+		data: {
+			name: error.name,
+			message: error.message,
+			stack: error.stack
+		}
+	}, callback);
+});
 };
 
 module.exports = new Platform();
