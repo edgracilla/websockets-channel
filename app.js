@@ -31,9 +31,7 @@ platform.on('data', function (data) {
 		async.each(data, function (datum, done) {
 			if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid Array/JSON Object or a collection of objects. Data: ${data}`));
 
-			sendData(datum, (error) => {
-				if (error) platform.handleException(error);
-			});
+			sendData(datum, done);
 		}, (error) => {
 			if (error) platform.handleException(error);
 		});
