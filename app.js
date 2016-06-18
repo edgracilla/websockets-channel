@@ -11,7 +11,7 @@ let sendData = function (data, callback) {
 		client.send(JSON.stringify(data), function (error) {
 			if (!error) {
 				platform.log(JSON.stringify({
-					title: 'Data sent through Websocket Channel on port ' + port,
+					title: `Data sent through Websocket Channel on port ${port}`,
 					data: data
 				}));
 			}
@@ -29,7 +29,7 @@ platform.on('data', function (data) {
 	}
 	else if (isArray(data)) {
 		async.each(data, function (datum, done) {
-			if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid Array/JSON Object or a collection of objects. Data: ${data}`));
+			if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`));
 
 			sendData(datum, done);
 		}, (error) => {
@@ -37,14 +37,14 @@ platform.on('data', function (data) {
 		});
 	}
 	else
-		platform.handleException(new Error(`Invalid data received. Data must be a valid Array/JSON Object or a collection of objects. Data: ${data}`));
+		platform.handleException(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`));
 });
 
 platform.on('close', function () {
 	let d = require('domain').create();
 
 	d.once('error', function (error) {
-		console.error('Error closing Websockets Channel on port ' + port, error);
+		console.error(`Error closing Websockets Channel on port ${port}`, error);
 		platform.handleException(error);
 		platform.notifyClose();
 		d.exit();
@@ -52,7 +52,7 @@ platform.on('close', function () {
 
 	d.run(function () {
 		server.close();
-		console.log('Websockets Channel closed on port ' + port);
+		console.log(`Websockets Channel closed on port ${port}`);
 		platform.notifyClose();
 		d.exit();
 	});
@@ -102,6 +102,6 @@ platform.once('ready', function (options) {
 		});
 	});
 
-	platform.log('Websockets Channel initialized on port ' + port);
+	platform.log(`Websockets Channel initialized on port ${port}`);
 	platform.notifyReady();
 });
