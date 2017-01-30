@@ -1,107 +1,96 @@
-'use strict';
+'use strict'
 
-var platform      = require('./platform'),
-	isArray       = require('lodash.isarray'),
-	isPlainObject = require('lodash.isplainobject'),
-	async         = require('async'),
-	server, port;
+let ws = require('ws')
+let async = require('async')
+let isArray = require('lodash.isarray')
+let reekoh = require('demo-reekoh-node')
+let isPlainObject = require('lodash.isplainobject')
+
+let _plugin = new reekoh.plugins.Channel()
+let _server = {}
+
+let notifyReady = () => {
+  setImmediate(() => {
+    process.send({ type: 'ready' })
+  })
+}
 
 let sendData = function (data, callback) {
-	async.each(server.clients, function (client, done) {
-		client.send(JSON.stringify(data), function (error) {
-			if (!error) {
-				platform.log(JSON.stringify({
-					title: `Data sent through Websocket Channel on port ${port}`,
-					data: data
-				}));
-			}
+  async.each(_server.clients, function (client, done) {
+    client.send(JSON.stringify(data), function (error) {
+      if (!error) {
+        _plugin.log(JSON.stringify({
+          title: `Data sent through Websocket Channel on port ${_plugin.port}`,
+          data: data
+        }))
+      }
+      done(error)
+    })
+  }, callback)
+}
 
-			done(error);
-		});
-	}, callback);
-};
+/**
+ * Emitted when device data is received.
+ * This is the event to listen to in order to get real-time data feed from the connected devices.
+ * @param data {Object | [Object]} - The transient data coming from the devices represented as an Object or a collection of Objects.
+ */
+_plugin.on('data', (data) => {
 
-platform.on('data', function (data) {
-	if (isPlainObject(data)) {
-		sendData(data, (error) => {
-			if (error) return platform.handleException(error);
-		});
-	}
-	else if (isArray(data)) {
-		async.each(data, function (datum, done) {
-			if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`));
+  if (isPlainObject(data)) {
+    sendData(data, (error) => {
+      if (error) return _plugin.handleException(error)
+    })
+  } else if (isArray(data)) {
+    async.each(data, function (datum, done) {
+      if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`))
 
-			sendData(datum, done);
-		}, (error) => {
-			if (error) platform.handleException(error);
-		});
-	}
-	else
-		platform.handleException(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`));
-});
+      sendData(datum, done)
+    }, (error) => {
+      if (error) _plugin.handleException(error)
+    })
+  } else {
+    _plugin.handleException(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`))
+  }
+})
 
-platform.on('close', function () {
-	let d = require('domain').create();
+/**
+ * Emitted when the platform bootstraps the plugin.
+ * The plugin should listen once and execute its init process.
+ */
+_plugin.on('ready', () => {
 
-	d.once('error', function (error) {
-		console.error(`Error closing Websockets Channel on port ${port}`, error);
-		platform.handleException(error);
-		platform.notifyClose();
-		d.exit();
-	});
+  _server = new ws.Server({ port: _plugin.port })
 
-	d.run(function () {
-		server.close();
-		console.log(`Websockets Channel closed on port ${port}`);
-		platform.notifyClose();
-		d.exit();
-	});
-});
+  _server.on('error', (err) => {
+    _plugin.logException(err)
+    console.error(err)
+  })
 
-platform.once('ready', function (options) {
-	let config = require('./config.json');
-	let WebSocketServer = require('ws').Server;
+  _server.on('connection', (socket) => {
 
-	let messageEvent = options.message_event || config.message_event.default;
-	let groupMessageEvent = options.groupmessage_event || config.groupmessage_event.default;
+    socket.on('error', (err) => {
+      _plugin.handleException(err)
+      console.error(err)
+    })
 
-	port = options.port;
-	server = new WebSocketServer({
-		port: options.port
-	});
+    socket.on('message', (data) => {
+      async.waterfall([
+        async.constant(data || '{}'),
+        async.asyncify(JSON.parse)
+      ], (err, obj) => {
+        if (err) return _plugin.handleException(err)
 
-	server.on('error', function (error) {
-		console.error(error);
-		platform.handleException(error);
-	});
+        if (obj.type === 'message') {
+          _plugin.relayMessage(obj.message, obj.deviceTypes, obj.devices)
+            .catch((err) => {
+              if (err) _plugin.handleException(err)
+            })
+        }
+      })
+    })
+  })
 
-	server.on('connection', function (socket) {
-		socket.on('error', function (error) {
-			console.error(error);
-			platform.handleException(error);
-		});
+  _plugin.log('Channel has been initialized on port ' + _plugin.port)
+  notifyReady()
+})
 
-		socket.on('message', function (data) {
-			async.waterfall([
-				async.constant(data || '{}'),
-				async.asyncify(JSON.parse)
-			], (error, obj) => {
-				if (error) return platform.handleException(error);
-
-				if (obj.type === messageEvent) {
-					platform.sendMessageToDevice(obj.target, obj.message, (error) => {
-						if (error) platform.handleException(error);
-					});
-				}
-				else if (obj.type === groupMessageEvent) {
-					platform.sendMessageToGroup(obj.target, obj.message, (error) => {
-						if (error) platform.handleException(error);
-					});
-				}
-			});
-		});
-	});
-
-	platform.log(`Websockets Channel initialized on port ${port}`);
-	platform.notifyReady();
-});
