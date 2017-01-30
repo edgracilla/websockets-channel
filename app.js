@@ -29,11 +29,6 @@ let sendData = function (data, callback) {
   }, callback)
 }
 
-/**
- * Emitted when device data is received.
- * This is the event to listen to in order to get real-time data feed from the connected devices.
- * @param data {Object | [Object]} - The transient data coming from the devices represented as an Object or a collection of Objects.
- */
 _plugin.on('data', (data) => {
 
   if (isPlainObject(data)) {
@@ -53,10 +48,6 @@ _plugin.on('data', (data) => {
   }
 })
 
-/**
- * Emitted when the platform bootstraps the plugin.
- * The plugin should listen once and execute its init process.
- */
 _plugin.on('ready', () => {
 
   _server = new ws.Server({ port: _plugin.port })

@@ -25,10 +25,10 @@ describe('WS Channel', () => {
         _conn = conn
         return conn.createChannel()
       }).then((channel) => {
-        _channel = channel
-      }).catch((err) => {
-        console.log(err)
-      })
+      _channel = channel
+    }).catch((err) => {
+      console.log(err)
+    })
 
   })
 
