@@ -1,10 +1,14 @@
 {
-  "name": "channel",
-  "version": "1.0.0",
-  "description": "Channel plugin seed",
+  "name": "websockets-channel",
+  "version": "1.0.2",
+  "description": "Vanilla Websockets Channel for the Reekoh IoT Platform. Standard Websockets Channel which provides bi-directional communication from Reekoh to an external application. Sends device data feed and also accepts commands to be sent to the connected devices.",
   "main": "app.js",
   "scripts": {
     "test": "gulp test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Reekoh/websockets-channel"
   },
   "author": "Reekoh, Inc.",
   "license": "LGPL-3.0",
