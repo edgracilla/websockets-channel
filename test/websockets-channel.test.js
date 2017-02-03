@@ -34,9 +34,8 @@ describe('WS Channel', () => {
 
   after('terminate child process', function () {
     this.timeout(5000)
-
+    _conn.close()
     setTimeout(() => {
-      _conn.close()
       wsChannel.kill('SIGKILL')
     }, 4500)
   })

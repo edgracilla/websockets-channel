@@ -9,12 +9,6 @@ let isPlainObject = require('lodash.isplainobject')
 let _plugin = new reekoh.plugins.Channel()
 let _server = {}
 
-let notifyReady = () => {
-  setImmediate(() => {
-    process.send({ type: 'ready' })
-  })
-}
-
 let sendData = function (data, callback) {
   async.each(_server.clients, function (client, done) {
     client.send(JSON.stringify(data), function (error) {
@@ -82,6 +76,6 @@ _plugin.on('ready', () => {
   })
 
   _plugin.log('Channel has been initialized on port ' + _plugin.port)
-  notifyReady()
+  setImmediate(() => { process.send({ type: 'ready' }) })
 })
 
