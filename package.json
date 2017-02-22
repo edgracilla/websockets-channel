@@ -1,22 +1,22 @@
 {
   "name": "websockets-channel",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "Vanilla Websockets Channel for the Reekoh IoT Platform. Standard Websockets Channel which provides bi-directional communication from Reekoh to an external application. Sends device data feed and also accepts commands to be sent to the connected devices.",
   "main": "app.js",
   "scripts": {
-    "test": "gulp test"
+    "test": "gulp lint"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Reekoh/websockets-channel"
   },
   "author": "Reekoh, Inc.",
-  "license": "LGPL-3.0",
+  "license": "GPL-3.0",
   "dependencies": {
     "async": "^2.1.4",
-    "demo-reekoh-node": "^1.0.0",
-    "lodash.isarray": "^4.0.0",
+    "lodash.isempty": "^4.4.0",
     "lodash.isplainobject": "^4.0.6",
+    "reekoh": "^1.0.0",
     "ws": "^1.1.1"
   },
   "devDependencies": {
@@ -24,12 +24,12 @@
     "async": "^2.1.4",
     "gulp": "^3.9.1",
     "gulp-cli": "^1.2.1",
-    "gulp-jshint": "^2.0.4",
+    "gulp-jshint": "^2.0.1",
     "gulp-json-lint": "^0.1.0",
     "gulp-mocha": "^2.2.0",
     "gulp-plumber": "^1.1.0",
+    "gulp-standard": "^8.0.4",
     "jshint": "^2.9.4",
-    "lodash.isempty": "^4.4.0",
     "mocha": "^2.5.3",
     "should": "^9.0.2"
   }

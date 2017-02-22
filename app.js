@@ -1,17 +1,17 @@
 'use strict'
 
-let ws = require('ws')
-let async = require('async')
-let isArray = require('lodash.isarray')
-let reekoh = require('demo-reekoh-node')
-let isPlainObject = require('lodash.isplainobject')
+const ws = require('ws')
+const async = require('async')
+const reekoh = require('reekoh')
+const isArray = require('lodash.isarray')
+const isPlainObject = require('lodash.isplainobject')
 
+let _server = null
 let _plugin = new reekoh.plugins.Channel()
-let _server = {}
 
-let sendData = function (data, callback) {
-  async.each(_server.clients, function (client, done) {
-    client.send(JSON.stringify(data), function (error) {
+let sendData = (data, callback) => {
+  async.each(_server.clients, (client, done) => {
+    client.send(JSON.stringify(data), (error) => {
       if (!error) {
         _plugin.log(JSON.stringify({
           title: `Data sent through Websocket Channel on port ${_plugin.port}`,
@@ -24,26 +24,24 @@ let sendData = function (data, callback) {
 }
 
 _plugin.on('data', (data) => {
-
   if (isPlainObject(data)) {
     sendData(data, (error) => {
-      if (error) return _plugin.handleException(error)
+      if (error) return _plugin.logException(error)
     })
   } else if (isArray(data)) {
-    async.each(data, function (datum, done) {
+    async.each(data, (datum, done) => {
       if (!isPlainObject(datum)) return done(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`))
 
       sendData(datum, done)
     }, (error) => {
-      if (error) _plugin.handleException(error)
+      if (error) _plugin.logException(error)
     })
   } else {
-    _plugin.handleException(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`))
+    _plugin.logException(new Error(`Invalid data received. Data must be a valid JSON Object or a collection of objects. Data: ${data}`))
   }
 })
 
 _plugin.on('ready', () => {
-
   _server = new ws.Server({ port: _plugin.port })
 
   _server.on('error', (err) => {
@@ -52,9 +50,8 @@ _plugin.on('ready', () => {
   })
 
   _server.on('connection', (socket) => {
-
     socket.on('error', (err) => {
-      _plugin.handleException(err)
+      _plugin.logException(err)
       console.error(err)
     })
 
@@ -63,19 +60,18 @@ _plugin.on('ready', () => {
         async.constant(data || '{}'),
         async.asyncify(JSON.parse)
       ], (err, obj) => {
-        if (err) return _plugin.handleException(err)
+        if (err) return _plugin.logException(err)
 
         if (obj.type === 'message') {
-          _plugin.relayMessage(obj.message, obj.deviceTypes, obj.devices)
-            .catch((err) => {
-              if (err) _plugin.handleException(err)
-            })
+          _plugin.relayCommand(obj.command, obj.devices, obj.deviceGroups).catch((err) => {
+            if (err) _plugin.logException(err)
+          })
         }
       })
     })
   })
 
   _plugin.log('Channel has been initialized on port ' + _plugin.port)
-  setImmediate(() => { process.send({ type: 'ready' }) })
+  process.send({ type: 'ready' })
 })
 
