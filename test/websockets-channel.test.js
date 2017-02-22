@@ -14,9 +14,9 @@ const INPUT_PIPE = 'demo.pipe.channel'
 const COMMAND_RELAYS = 'demo.channel.cmd.relay'
 const BROKER = 'amqp://guest:guest@127.0.0.1/'
 
-let _plugin = null
-let _channel = null
+let _app = null
 let _conn = null
+let _channel = null
 
 describe('Websocket Channel', () => {
   before('init', () => {
@@ -40,13 +40,13 @@ describe('Websocket Channel', () => {
     this.timeout(5000)
     _conn.close()
     setTimeout(() => {
-      _plugin.kill('SIGKILL')
+      _app.kill('SIGKILL')
     }, 4500)
   })
 
   describe('#spawn', () => {
     it('should spawn a child process', () => {
-      should.ok(_plugin = cp.fork(process.cwd()), 'Child process not spawned.')
+      should.ok(_app = cp.fork(process.cwd()), 'Child process not spawned.')
     })
   })
 
@@ -54,11 +54,11 @@ describe('Websocket Channel', () => {
     it('should notify the parent process when ready within 8 seconds', (done) => {
       this.timeout(8000)
 
-      _plugin.on('message', (msg) => {
+      _app.on('message', (msg) => {
         if (msg.type === 'ready') done()
       })
 
-      _plugin.send({ type: 'ready' }, (error) => {
+      _app.send({ type: 'ready' }, (error) => {
         should.ifError(error)
       })
     })
