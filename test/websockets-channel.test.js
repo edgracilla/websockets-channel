@@ -5,7 +5,7 @@ const async = require('async')
 const amqp = require('amqplib')
 const WebSocket = require('ws')
 const should = require('should')
-const cp = require('child_process')
+
 const isEmpty = require('lodash.isempty')
 
 const PORT = 8081
@@ -19,6 +19,7 @@ let _conn = null
 let _channel = null
 
 describe('Websocket Channel', () => {
+
   before('init', () => {
     process.env.PORT = PORT
     process.env.BROKER = BROKER
@@ -36,37 +37,21 @@ describe('Websocket Channel', () => {
     })
   })
 
-  after('terminate child process', function () {
-    this.timeout(5000)
+  after('terminate', function () {
     _conn.close()
-    setTimeout(() => {
-      _app.kill('SIGKILL')
-    }, 4500)
   })
 
-  describe('#spawn', () => {
-    it('should spawn a child process', () => {
-      should.ok(_app = cp.fork(process.cwd()), 'Child process not spawned.')
-    })
-  })
-
-  describe('#handShake', function () {
-    it('should notify the parent process when ready within 8 seconds', (done) => {
-      this.timeout(8000)
-
-      _app.on('message', (msg) => {
-        if (msg.type === 'ready') done()
-      })
-
-      _app.send({ type: 'ready' }, (error) => {
-        should.ifError(error)
-      })
+  describe('#start', function () {
+    it('should start the app', function (done) {
+      this.timeout(10000)
+      _app = require('../app')
+      _app.once('init', done)
     })
   })
 
   describe('#data', function () {
     it('should be able to serve a client and exchange data', (done) => {
-      this.timeout(5000)
+      this.timeout(8000)
 
       let url = 'http://127.0.0.1:' + PORT
       let ws = new WebSocket(url)
@@ -90,21 +75,11 @@ describe('Websocket Channel', () => {
   })
 
   describe('#message', function () {
-    it('should be able to receive correct messages', function (done) {
+    it('should be able to receive correct command', function (done) {
       this.timeout(10000)
 
-      // -- test data
-
-      let dummyData = {
-        type: 'message',
-        devices: '527981789267421',
-        deviceGroups: '527981789267421',
-        command: 'ACTIVATE'
-      }
-
       // -- set msg queue listener
-
-      let processTask = (msg) => {
+      _channel.consume(COMMAND_RELAYS, (msg) => {
         if (!isEmpty(msg)) {
           async.waterfall([
             async.constant(msg.content.toString('utf8')),
@@ -116,16 +91,7 @@ describe('Websocket Channel', () => {
             done(err)
           })
         }
-      }
-
-      let ret = _channel.consume(COMMAND_RELAYS, (msg) => {
-        if (!msg) return
-        processTask(msg)
         _channel.ack(msg)
-      })
-
-      ret.then(() => {
-        // noop
       }).catch((err) => {
         should.ifError(err)
       })
@@ -136,7 +102,12 @@ describe('Websocket Channel', () => {
       let ws = new WebSocket(url)
 
       ws.on('open', function () {
-        ws.send(JSON.stringify(dummyData))
+        ws.send(JSON.stringify({
+          type: 'message',
+          devices: '527981789267421',
+          deviceGroups: '527981789267421',
+          command: 'ACTIVATE'
+        }))
       })
     })
   })

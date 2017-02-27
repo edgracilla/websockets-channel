@@ -4,8 +4,10 @@ MAINTAINER Reekoh
 
 WORKDIR /home
 
-# Install dependencies
+# copy files
 ADD . /home
+
+# Install dependencies
 RUN npm install
 
 # setting need environment variables
