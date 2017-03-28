@@ -1,0 +1,30 @@
+apiVersion: 1.0.0
+kind: Plugin
+metadata:
+  name: Websockets Channel
+  description: Vanilla Websockets Channel for the Reekoh IoT Platform. Standard Websockets Channel which provides bi-directional communication from Reekoh to an external application. Sends device data feed and also accepts commands to be sent to the connected devices
+  documentation: README.md
+  icon: asset/icon/reekoh200x200.png
+  signupLink: https://myservice.com/signup # ??
+  type: Storage
+  price: 0
+  tags:
+    - channel
+    - websockets
+  config:
+    messageEvent:
+      label: Message Evet
+      type: String
+      required: false
+      default: message
+      help: "The message type to filter for device messages or commands. Default: message."
+      maxLength: 1000
+
+  loadBalancing:
+    method: http
+    enableSticky: true
+
+  release:
+    version: 1.0.0
+    notes: path/to/RELEASENOTESv1.0.0.md # ??
+    image: path/to/docker/image # ??

@@ -1,0 +1,8 @@
+{
+  "messageEvent": {
+    "type": "String",
+    "label": "Message Event",
+    "default": "message",
+    "help": "The message type to filter for device messages or commands. Default: message"
+  }
+}
